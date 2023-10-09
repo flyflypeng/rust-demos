@@ -3,6 +3,7 @@
 // 参数 1：内核源码目录下arch/<arch-name>/Kconfig文件路径
 // 参数 2：包含裁剪的内核fragments的目录
 
+use anyhow::{anyhow, Ok, Result};
 use std::fs;
 use std::{collections::HashMap, env};
 
@@ -74,11 +75,31 @@ fn parse_configs_vec(text: &str) -> Vec<String> {
     configs
 }
 
+fn filter_auto_select_config(map: &HashMap<String, String>) -> Result<HashMap<String, String>> {
+    let mut select_configs = HashMap::new();
+
+    for (_, v) in map.iter() {
+        let lines: Vec<&str> = v.lines().collect();
+        for line in lines {
+            if line.contains("select") && !line.contains("if") {
+                let result: Vec<&str> = line.trim().split(" ").collect();
+                if result.len() != 2 {
+                    println!("invalid select config value");
+                    continue;
+                }
+                let new_key = result[1];
+                select_configs.insert(new_key.to_string(), "".to_string());
+            }
+        }
+    }
+
+    Ok(select_configs)
+}
+
 fn main() {
     //let text = "config X86_32\n\tdef_bool y\n\tdepends on !64BIT\n\t...\nconfig X86_64\n\tdef_bool y\n\tdepends on 64BIT\n\t...";
     let args: Vec<String> = env::args().collect();
     let kconfig_file = &args[1];
-    let config_fragments_dir = &args[2];
     let text = fs::read_to_string(kconfig_file).expect("failed to read contents from file");
 
     //let configs = parse_configs_vec(&text);
@@ -87,6 +108,15 @@ fn main() {
     println!("len of configs: {}", configs.len());
     println!("auto enabled kernel config: ");
     for (key, _) in &configs {
+        println!("{}", key);
+    }
+
+    println!("-----------------------------------");
+
+    let selectd_configs = filter_auto_select_config(&configs).unwrap();
+    println!("len of auto selected configs: {}", selectd_configs.len());
+    println!("auto selected kernel config: ");
+    for (key, _) in &selectd_configs {
         println!("{}", key);
     }
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-dir_path="/path/to/your/directory"
-pattern="given_string"
+dir_path=$1
+pattern=$2
 
 for file in "$dir_path"/*; do
     if [ -f "$file" ]; then
